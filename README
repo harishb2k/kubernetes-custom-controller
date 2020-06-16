@@ -1,3 +1,6 @@
+
+
+
 # Build
 export GOARCH="amd64"
 export GOOS="linux"
@@ -29,6 +32,6 @@ spec:
     spec:
       containers:
       - name: my-controller
-        image: harishb2k/my-controller:1.1
+        image: harishb2k/my-controller:1.2
 
 

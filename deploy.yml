@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-controller-deployment
+  labels:
+    app: my-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-controller
+  template:
+    metadata:
+      labels:
+        app: my-controller
+    spec:
+      containers:
+      - name: my-controller
+        image: harishb2k/my-controller:1.5

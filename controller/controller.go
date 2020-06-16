@@ -5,10 +5,13 @@ import (
     "fmt"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/util/runtime"
+    "k8s.io/apimachinery/pkg/util/wait"
     "k8s.io/client-go/informers"
     "k8s.io/client-go/kubernetes"
+    appslisters "k8s.io/client-go/listers/apps/v1"
     "k8s.io/client-go/tools/cache"
     "k8s.io/client-go/util/workqueue"
+    "k8s.io/klog/v2"
     "time"
 )
 
@@ -16,16 +19,24 @@ type Controller struct {
     workQueue           workqueue.RateLimitingInterface
     KubeClientSet       kubernetes.Interface
     KubeInformerFactory informers.SharedInformerFactory
+
+    deploymentsSynced cache.InformerSynced
+    deploymentsLister appslisters.DeploymentLister
 }
 
-func NewController(KubeClientSet kubernetes.Interface) *Controller {
+func NewController(KubeClientSet kubernetes.Interface, stopCh <-chan struct{}) *Controller {
+
+    kubeInformerFactory := informers.NewSharedInformerFactory(KubeClientSet, 1*time.Second)
+    deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 
     // KubeInformerFactory - this will callback us every 1 sec
     // workQueue - it is just a queue to store the updates and process them one-by-one
     controller := &Controller{
         KubeClientSet:       KubeClientSet,
-        KubeInformerFactory: informers.NewSharedInformerFactory(KubeClientSet, 1*time.Second),
+        KubeInformerFactory: kubeInformerFactory,
         workQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "my-controller-rate-limit"),
+        deploymentsSynced:   deploymentInformer.Informer().HasSynced,
+        deploymentsLister:   deploymentInformer.Lister(),
     }
 
     // ************************************ This is the real thing *****************************************************
@@ -49,17 +60,28 @@ func NewController(KubeClientSet kubernetes.Interface) *Controller {
     );
 
     // Start informer (hack to put local channel to close)
-    stop := make(chan struct{})
-    controller.KubeInformerFactory.Start(stop)
+    controller.KubeInformerFactory.Start(stopCh)
 
     return controller;
 }
 
 // This is the method which will run to do the job
-func (c *Controller) Run() {
-    go func() {
-        c.runWorker()
-    }()
+func (c *Controller) Run(stopCh <-chan struct{}) {
+    stop := make(chan struct{})
+
+    klog.Info("Waiting for informer caches to sync")
+    if ok := cache.WaitForCacheSync(stop, c.deploymentsSynced); !ok {
+        fmt.Println("failed to wait for caches to sync")
+        return
+    } else {
+        fmt.Println("Cache wait is done")
+    }
+
+    go wait.Until(c.runWorker, time.Second, stopCh)
+
+    klog.Info("Started workers")
+    <-stopCh
+    klog.Info("Shutting down workers")
 }
 
 func (c *Controller) runWorker() {
@@ -85,30 +107,18 @@ func (c *Controller) processNextWorkItem() bool {
         namespace, name, _ := cache.SplitMetaNamespaceKey(key)
         var _ = name
 
-        /* var ctx = context.Background()
-         var opts metav1.GetOptions
-         service, _ := c.KubeClientSet.CoreV1().Services(namespace).Get(
-             ctx,
-             name,
-             opts,
-         )
-         var _ = service
-         // fmt.Println("--> ", service)*/
-
         // We will work with only default namespace - only on "my-app"
         if namespace == "default" {
 
-            var opts1 metav1.GetOptions
-            d, _ := c.KubeClientSet.AppsV1().Deployments(namespace).Get(
-                context.Background(),
-                "my-app",
-                opts1,
-            )
+            d, _ := c.deploymentsLister.Deployments(namespace).Get("my-app")
+
             if d != nil {
                 fmt.Println("Got Deployment - ", d)
 
+                d = d.DeepCopy()
+
                 // Update replica set to 10
-                var v int32 = 10;
+                var v int32 = 2;
                 d.Spec.Replicas = &v
 
                 // Apply changes
