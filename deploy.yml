@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
       - name: my-controller
-        image: harishb2k/my-controller:1.5
+        image: harishb2k/my-controller:1.6

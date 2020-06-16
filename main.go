@@ -29,9 +29,9 @@ func main() {
     // If you are running from command line then uncomment line with (masterURL, kubeconfig)
     // it and comment then line with ("", "")
     // >> go run main.go -kubeconfig=<your home dir>/.kube/config
-    cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+    // cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 
-    // cfg, err := clientcmd.BuildConfigFromFlags("", "")
+    cfg, err := clientcmd.BuildConfigFromFlags("", "")
     if err != nil {
         fmt.Print("Error to build config")
         return
