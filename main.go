@@ -19,7 +19,11 @@ func main() {
     klog.InitFlags(nil)
     flag.Parse()
 
+    // If you are running from command line then uncomment line with (masterURL, kubeconfig)
+    // it and comment then line with ("", "")
+    // >> go run main.go -kubeconfig=<your home dir>/.kube/config
     // cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+
     cfg, err := clientcmd.BuildConfigFromFlags("", "")
     if err != nil {
         fmt.Print("Error to build config")
@@ -32,16 +36,15 @@ func main() {
         return
     }
 
+    // Make a controller and run ti
     controllerObject := controller.NewController(client)
-
     controllerObject.Run()
 
-
-    var _ = client
+    // Should use a channel to kill this controller - just a easy hack for now using sleep
     time.Sleep(1 * time.Hour)
 }
 
 func init() {
-    flag.StringVar(&kubeconfig, "kubeconfig", "/Users/harish.bohara/.kube/config", "Path to a kubeconfig. Only required if out-of-cluster.")
+    flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
     flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }
