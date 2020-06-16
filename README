@@ -1,0 +1,34 @@
+# Build
+export GOARCH="amd64"
+export GOOS="linux"
+go build  -o main .
+
+# Build and upload to docker hub
+docker build -t harishb2k/my-controller:1.1 .
+docker push harishb2k/my-controller:1.1
+
+# Just add any app with name "my-app" -> this controller will rescale it to 10 replica
+
+# Deploy this YAML
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-controller-deployment
+  labels:
+    app: my-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-controller
+  template:
+    metadata:
+      labels:
+        app: my-controller
+    spec:
+      containers:
+      - name: my-controller
+        image: harishb2k/my-controller:1.1
+
+
