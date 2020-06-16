@@ -1,37 +1,19 @@
 
 
 
-# Build
-export GOARCH="amd64"
-export GOOS="linux"
-go build  -o main .
+# Step 1 - Build your code for linux
+    export GOARCH="amd64"
+    export GOOS="linux"
+    go build  -o main .
 
-# Build and upload to docker hub
-docker build -t harishb2k/my-controller:1.1 .
-docker push harishb2k/my-controller:1.1
+# Step 2 (PUSH is optional) - Build and upload to docker hub (change the path to your repo)
+    docker build -t harishb2k/my-controller:1.6 .
 
-# Just add any app with name "my-app" -> this controller will rescale it to 10 replica
+    (Optional Step)
+    docker push harishb2k/my-controller:1.6
 
-# Deploy this YAML
+# Step 3 - This sample scales "my-app" to 2 replica
+    Create any app with name "my-app"
 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: my-controller-deployment
-  labels:
-    app: my-controller
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: my-controller
-  template:
-    metadata:
-      labels:
-        app: my-controller
-    spec:
-      containers:
-      - name: my-controller
-        image: harishb2k/my-controller:1.2
-
-
+# Step 6 - Deploy your controller (make sure deploy.yml has same version "my-controller:1.6" in the yml file)
+    kubectl apply -f deploy.yml
